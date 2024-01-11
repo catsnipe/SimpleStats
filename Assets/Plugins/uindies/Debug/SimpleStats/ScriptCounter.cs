@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 using UnityEngine.UI;
+using UnityEngine.LowLevel;
 
 /// <summary>
 /// Measure the processing time of the loop script that Unity executes every frame.
@@ -24,7 +25,7 @@ public class ScriptCounter
         public float	AverageTime;
     }
     
-    static List<LoopsInfo> loops;
+    static Dictionary<PlayerLoopSystem, LoopsInfo> loops;
     static float time;
     
     /// <summary>
@@ -36,69 +37,38 @@ public class ScriptCounter
     {
         var playerLoop = UnityEngine.LowLevel.PlayerLoop.GetDefaultPlayerLoop();
         
-        loops = new List<LoopsInfo>();
+        loops = new Dictionary<PlayerLoopSystem, LoopsInfo>();
         foreach (var loop in playerLoop.subSystemList)
         {
             LoopsInfo group = new LoopsInfo();
             group.LoopName  = loop.type.Name;
 
-            loops.Add(group);
+            loops.Add(loop, group);
         }
         
         // 計測開始
-        UnityEngine.LowLevel.PlayerLoopSystem presys = new UnityEngine.LowLevel.PlayerLoopSystem()
+        PlayerLoopSystem presys = new PlayerLoopSystem()
         {
             type = typeof(UpdateTimeStart),
             updateDelegate = () => { StartMeasure(); }
         };
+
         // 計測終了
-        UnityEngine.LowLevel.PlayerLoopSystem[] postsys = new UnityEngine.LowLevel.PlayerLoopSystem[]
+        List<PlayerLoopSystem> postsys = new List<PlayerLoopSystem>();
+        foreach (var loop in playerLoop.subSystemList)
         {
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(0); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(1); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(2); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(3); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(4); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(5); }
-            },
-            new UnityEngine.LowLevel.PlayerLoopSystem()
-            {
-                type = typeof(UpdateTimeEnd),
-                updateDelegate = () => { EndMeasure(6); }
-            },
-        };
-        
-        if (playerLoop.subSystemList.Length != postsys.Length)
-        {
-            Debug.LogError($"unity in current version is unsupported.");
-            return;
+            postsys.Add(
+                new UnityEngine.LowLevel.PlayerLoopSystem()
+                {
+                    type = typeof(UpdateTimeEnd),
+                    updateDelegate = () => { EndMeasure(loops[loop]); }
+                }
+            );
         }
 
-        // In Unity 2019.4
+        // In Unity 2022.3
         //
+        // timeupdate
         // initialization
         // earlyupdate
         // fixedupdate
@@ -109,7 +79,7 @@ public class ScriptCounter
         for (int group = 0; group < playerLoop.subSystemList.Length; group++)
         {
             var updateSystem = playerLoop.subSystemList[group];
-            var subSystem    = new List<UnityEngine.LowLevel.PlayerLoopSystem>(updateSystem.subSystemList);
+            var subSystem    = new List<PlayerLoopSystem>(updateSystem.subSystemList);
 
             subSystem.Insert(0, presys);
             subSystem.Add(postsys[group]);
@@ -118,14 +88,14 @@ public class ScriptCounter
             playerLoop.subSystemList[group] = updateSystem;
         }
         
-        UnityEngine.LowLevel.PlayerLoop.SetPlayerLoop(playerLoop);
+        PlayerLoop.SetPlayerLoop(playerLoop);
     }
     
     /// <summary>
     /// Get information for each group of PlayerLoops.
     /// PlayerLoops のグループごとの情報を取得
     /// </summary>
-    public static List<LoopsInfo> GetPlayerLoopsInfo()
+    public static Dictionary<PlayerLoopSystem, LoopsInfo> GetPlayerLoopsInfo()
     {
         return loops;
     }
@@ -143,11 +113,9 @@ public class ScriptCounter
     /// End measurement.
     /// 計測終了
     /// </summary>
-    /// <param name="loopsNo">PlayerLoops group number</param>
-    static void EndMeasure(int loopsNo)
+    /// <param name="group">PlayerLoops group number</param>
+    static void EndMeasure(LoopsInfo group)
     {
-        LoopsInfo group = loops[loopsNo];
-        
         group.FrameCount++;
         group.PastTime     = Time.realtimeSinceStartup - time;
         group.TotalTime   += group.PastTime;

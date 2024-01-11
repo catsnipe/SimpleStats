@@ -53,7 +53,7 @@ public class SimpleStats : MonoBehaviour
             string text = "";
             foreach (var loop in ScriptCounter.GetPlayerLoopsInfo())
             {
-                text += $"{loop.LoopName}\r\n";
+                text += $"{loop.Value.LoopName}\r\n";
             }
             ScriptHeader.SetText(text);
         }
@@ -175,7 +175,7 @@ public class SimpleStats : MonoBehaviour
             
                     foreach (var loop in ScriptCounter.GetPlayerLoopsInfo())
                     {
-                        float avg = loop.AverageTime * 1000;
+                        float avg = loop.Value.AverageTime * 1000;
                         sb.AppendLine($"{avg:F4}ms");
                     }
                     ScriptValue?.SetText(sb.ToString());
