@@ -13,7 +13,7 @@ public class SimpleStats : MonoBehaviour
 {
     public enum eType
     {
-        Default,
+        FPS,
         Script,
     }
 
@@ -28,13 +28,13 @@ public class SimpleStats : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI ScriptValue      = null;
     [SerializeField]
-    GameObject      TypeDefault      = null;
+    GameObject      TypeFPS          = null;
     [SerializeField]
     GameObject      TypeScript       = null;
     [SerializeField]
     float           EveryDrawingTime = 0.2f;
     [SerializeField]
-    eType           Type             = eType.Default;
+    eType           Type             = eType.FPS;
 
     StringBuilder sb;
     float fps;
@@ -80,14 +80,14 @@ public class SimpleStats : MonoBehaviour
     void OnValidate()
     {
 #if UNITY_EDITOR
-        if (Type == eType.Default)
+        if (Type == eType.FPS)
         {
-            TypeDefault.SetActive(true);
+            TypeFPS.SetActive(true);
             TypeScript.SetActive(false);
         }
         else
         {
-            TypeDefault.SetActive(false);
+            TypeFPS.SetActive(false);
             TypeScript.SetActive(true);
         }
 #endif
@@ -145,7 +145,7 @@ public class SimpleStats : MonoBehaviour
     {
         while (true)
         {
-            if (Type == eType.Default)
+            if (Type == eType.FPS)
             {
                 // fps
                 FPSValue?.SetText($"{fps}");
